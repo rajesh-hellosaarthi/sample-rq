@@ -46,9 +46,11 @@ class  Organization extends CI_Model{
 			$dbData= $dbData[0];
 			if(!strcmp($dbData->password,$data['password'])){
 				http_response_code(200);
+				$uuId = $dbData->id;
 				$loginResponse['status']=1;
 				$loginResponse['message']="login success";
-				$loginResponse['user']=$this->getUser($email);	
+				$loginResponse['user']=$this->getUser($email);
+				$loginResponse['forms']=$this->getallform($uuId);	
 			}else{
 				http_response_code(406);
 				$loginResponse['status']=0;
@@ -95,6 +97,86 @@ class  Organization extends CI_Model{
 		$rows = $query->result();
 		return $rows;	
 	}
+
+	public function getallform($userid){
+		$f=array();
+		$this->db->select('*');
+		$this->db->from('form');
+		$this->db->where('uid',$userid);
+		$query = $this->db->get();
+		$rows = $query->result();
+		foreach($rows as $fr){
+			$feedbackCount = $this->getFormFeedBackCount($fr->formid);	
+			$f[] = array('formid'=>$fr->formid,'feed_count'=>$feedbackCount,'formdata'=>$this->getForm($fr->formid));
+		}	
+		return $f;
+	}
+	
+	public function getFormFeedBackCount($formId){
+		$this->db->select('count(*) as feedback');
+		$this->db->from('feedback_stream');
+		$this->db->where('formid',$formId);
+		$query = $this->db->get();
+		$rows = $query->result();
+		$row = $rows[0];
+		return $row->feedback;
+	}
+
+	public function placefeed($feed){
+		$placefeedStatus=array();
+		$fid = $feed->formid;
+		$feedStream = array();
+		$feedStream['formid']=$fid;
+		$this->db->insert('feedback_stream',$feedStream);
+		$feedid = $formid = $this->db->insert_id();
+		$feedStreamInfo=array();
+		$feedStreamInfo['feedid']=$feedid;
+		$feedStreamInfo['feeddata']=$feed->feeddata;
+		$this->placefeedDetail($feedStreamInfo);	
+		$placefeedStatus['status']=1;
+		return $placefeedStatus;
+	}
+	
+	public function placefeedDetail($feedStreamInfo){
+		$feedid = $feedStreamInfo['feedid'];
+		$feedData = $feedStreamInfo['feeddata'];
+		foreach($feedData as $eachQstnFeed){
+			unset($QstnFeed);
+			$QstnFeed = array();
+			$QstnFeed['fdid']=$feedid;
+			$QstnFeed['qid']=$eachQstnFeed->qid;
+			$QstnFeed['qtext']=$eachQstnFeed->qtext;
+			$this->db->insert('feedback_stream_info',$QstnFeed);
+		}		
+	}
+
+	public function getFormAllFeeds($formid){
+		$formFeeds=array();
+		$qid=array();
+		$sql="SELECT * FROM form INNER JOIN question ON form.formid=question.formid WHERE form.formid='$formid'";
+		$query = $this->db->query($sql);
+		$result = $query->result();
+		foreach($result as $qstn){
+			$qid[]=array('qid'=>$qstn->qid,'qtext'=>$qstn->qtext);
+		}
+		
+		foreach($qid as $q){
+			unset($qtnFeed);
+			$qtnFeed=array();
+			$qid =$q['qid'];
+			$sqlFeed = "SELECT * FROM feedback_stream_info WHERE qid='$qid' ORDER BY fdid DESC";
+			$feedQuery = $this->db->query($sqlFeed);
+			$feedResult = $feedQuery->result();
+			foreach($feedResult as $fr){
+				$qtnFeed[]=array('fdid'=>$fr->fdid,'qtext'=>$fr->qtext);
+			}
+			$formFeeds[]=array('qid'=>$q['qid'],'qtext'=>$q['qtext'],'feeds'=>$qtnFeed);
+		}
+		return $formFeeds;
+
+	}
+
+	
 }
 
 ?>

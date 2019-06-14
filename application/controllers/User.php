@@ -60,4 +60,39 @@ class User extends CI_Controller {
 			
 	}
 	
+	public function providefeedback(){
+		$feedPlaceResponse;
+		$feedbackRequest;
+		$reqObj = file_get_contents('php://input');
+		$inputData = json_decode($reqObj);
+		$this->load->model('organization');
+		$feedPlaceResponse = $this->organization->placefeed($inputData);
+		if($feedPlaceResponse['status']==1){
+			$feedPlaceResponse['message']='feed placed';
+		}else{
+			$feedPlaceResponse['message']='error placing feed';
+	
+		}
+		echo json_encode($feedPlaceResponse);
+	}
+
+
+	public function getformfeedback(){
+		$formResponse=array();
+		$formid = $this->input->post('formid');
+		$this->load->model('organization');
+		$feeds = $this->organization->getFormAllFeeds($formid);
+		if(!empty($feeds)){
+			$formResponse['status']=1;
+			$formResponse['message']='feedback available!';
+			$formResponse['feeds']=$feeds;
+		}else{
+			$formResponse['status']=0;
+			$formResponse['message']='no feedback available!';
+			$formResponse['feeds']=array();
+		}
+	
+		echo json_encode($formResponse);
+	}
+	
 }

@@ -55,3 +55,5 @@ $route['translate_uri_dashes'] = FALSE;
 $route['register']='user/register';
 $route['login']='user/login';
 $route['form']='user/createform';
+$route['providefeedback']='user/providefeedback';
+$route['formfeedback']='user/getformfeedback';
